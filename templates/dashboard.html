@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Tracker Dashboard</title>
+
+    <!-- ================================
+         Leaflet.js - Free Map Library
+         Google Maps ki tarah but free
+         ================================ -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        /* ================================
+           Basic Reset - Browser defaults hatao
+           ================================ */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        /* ================================
+           Main Layout
+           ================================ */
+        body {
+            background-color: #1a1a2e;
+            /* Dark background */
+            color: white;
+        }
+
+        /* ================================
+           Top Header Bar
+           ================================ */
+        .header {
+            background-color: #16213e;
+            padding: 15px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #0f3460;
+        }
+
+        .header h1 {
+            font-size: 20px;
+            color: #00d4ff;
+        }
+
+        /* ================================
+           Status Badge - Safe/Alert dikhata hai
+           ================================ */
+        .status-badge {
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .status-safe {
+            background-color: #00b894;
+            /* Green - Safe */
+            color: white;
+        }
+
+        .status-alert {
+            background-color: #d63031;
+            /* Red - Alert */
+            color: white;
+        }
+
+        /* ================================
+           Info Cards - Speed, Location etc
+           ================================ */
+        .info-bar {
+            display: flex;
+            gap: 15px;
+            padding: 15px 25px;
+            background-color: #16213e;
+        }
+
+        .card {
+            background-color: #0f3460;
+            padding: 12px 20px;
+            border-radius: 10px;
+            min-width: 150px;
+        }
+
+        .card-label {
+            font-size: 11px;
+            color: #a0a0a0;
+            /* Grey - label */
+            margin-bottom: 5px;
+        }
+
+        .card-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #00d4ff;
+            /* Blue - value */
+        }
+
+        /* ================================
+           Map Container
+           Full screen height minus header
+           ================================ */
+        #map {
+            height: calc(100vh - 130px);
+            /* Baaki sara screen */
+            width: 100%;
+        }
+
+        /* ================================
+           Last Update Time - Bottom right
+           ================================ */
+        .last-update {
+            position: fixed;
+            bottom: 15px;
+            right: 15px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #a0a0a0;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ================================
+         Header Section
+         ================================ -->
+    <div class="header">
+        <h1>🚗 Secure Vehicle Tracker</h1>
+        <!-- Status badge - JS se update hoga -->
+        <span class="status-badge status-safe" id="statusBadge">
+            ✅ Safe
+        </span>
+    </div>
+
+    <!-- ================================
+         Info Cards Section
+         Speed, Coordinates dikhate hain
+         ================================ -->
+    <div class="info-bar">
+        <div class="card">
+            <div class="card-label">SPEED</div>
+            <div class="card-value" id="speedValue">0 km/h</div>
+        </div>
+        <div class="card">
+            <div class="card-label">LATITUDE</div>
+            <div class="card-value" id="latValue">--</div>
+        </div>
+        <div class="card">
+            <div class="card-label">LONGITUDE</div>
+            <div class="card-value" id="lngValue">--</div>
+        </div>
+        <div class="card">
+            <div class="card-label">STATUS</div>
+            <div class="card-value" id="statusValue">Safe</div>
+        </div>
+    </div>
+
+    <!-- ================================
+         Map - Yahan live location dikhegi
+         ================================ -->
+    <div id="map"></div>
+
+    <!-- Last update time -->
+    <div class="last-update">
+        Last Update: <span id="lastUpdate">--</span>
+    </div>
+
+    <script>
+        // ================================
+        // Map Initialize karo
+        // Jammu ki location pe center karo
+        // ================================
+        var map = L.map('map').setView([32.7266, 74.8570], 13);
+
+        // ================================
+        // Map Tiles Load karo
+        // OpenStreetMap - bilkul free
+        // ================================
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: 'OpenStreetMap'
+        }).addTo(map);
+
+        // ================================
+        // Vehicle Marker banao map pe
+        // Yeh move karega jab location update hogi
+        // ================================
+        var marker = L.marker([32.7266, 74.8570]).addTo(map);
+        marker.bindPopup("Vehicle Location").openPopup();
+
+        // ================================
+        // Server se location fetch karo
+        // Har 5 seconds me automatically call hogi
+        // ================================
+        function fetchLocation() {
+            fetch('/location')
+                .then(response => response.json())
+                .then(data => {
+
+                    // Marker ko naye coordinates pe move karo
+                    marker.setLatLng([data.lat, data.lng]);
+
+                    // Map ko vehicle ke saath center karo
+                    map.setView([data.lat, data.lng]);
+
+                    // Cards update karo
+                    document.getElementById('speedValue').textContent = data.speed + ' km/h';
+                    document.getElementById('latValue').textContent = data.lat.toFixed(4);
+                    document.getElementById('lngValue').textContent = data.lng.toFixed(4);
+                    document.getElementById('statusValue').textContent = data.status;
+                    document.getElementById('lastUpdate').textContent = data.timestamp || '--';
+
+                    // ================================
+                    // Status Badge update karo
+                    // Safe = Green, Alert = Red
+                    // ================================
+                    var badge = document.getElementById('statusBadge');
+                    if (data.status === 'Safe') {
+                        badge.className = 'status-badge status-safe';
+                        badge.textContent = '✅ Safe';
+                    } else {
+                        badge.className = 'status-badge status-alert';
+                        badge.textContent = '🚨 ' + data.status;
+                    }
+                })
+                .catch(err => {
+                    // Agar server se connection fail ho
+                    console.error('Server connection failed:', err);
+                });
+        }
+
+        // Pehli baar turant call karo
+        fetchLocation();
+
+        // Phir har 5 seconds me call karo
+        setInterval(fetchLocation, 5000);
+    </script>
+
+</body>
+
+</html>
+```
+
+---
+
+Save karo aur browser me jaao:
+```
+http://127.0.0.1:5000
