@@ -1,10 +1,15 @@
+# ============================================
+# Vehicle Tracker - Main Server
+# Updated: Plain data accept karta hai
+# Encryption baad me add karenge
+# ============================================
+
 from flask import Flask, request, jsonify, render_template, redirect, url_for, session
 from datetime import datetime
 import bcrypt
 from dotenv import load_dotenv
 import os
 
-from crypto_utils import decrypt_data
 from spoofing_detection import check_spoofing, get_previous_location
 from telegram_alert import send_alert
 
@@ -27,6 +32,9 @@ location_data = {
     "timestamp": ""
 }
 
+# ============================================
+# ROUTE 1: Login
+# ============================================
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -42,100 +50,58 @@ def login():
             return render_template('login.html', error="Galat username ya password")
     return render_template('login.html', error=None)
 
+# ============================================
+# ROUTE 2: Logout
+# ============================================
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for('login'))
 
+# ============================================
+# ROUTE 3: Dashboard
+# ============================================
 @app.route('/')
 def dashboard():
     if not session.get('logged_in'):
         return redirect(url_for('login'))
     return render_template('dashboard.html')
 
+# ============================================
+# ROUTE 4: Location Data — Dashboard ke liye
+# ============================================
 @app.route('/location', methods=['GET'])
 def get_location():
     if not session.get('logged_in'):
         return jsonify({'error': 'Unauthorized'}), 401
     return jsonify(location_data)
+
 # ============================================
-# ROUTE 6: Tamper & Accident Detection
-# ESP32 vibration sensor trigger hone pe
-# yahan call karega
+# ROUTE 5: ESP32 Location Update
+# Plain JSON data accept karta hai
+# Format: {"lat": 32.7266, "lng": 74.857, "speed": 60}
 # ============================================
-@app.route('/tamper', methods=['POST'])
-def tamper_detected():
-    try:
-        data = request.json
-        
-        # ESP32 se vibration intensity aur previous speed lo
-        vibration_intensity = data.get('intensity', 0)
-        previous_speed = data.get('previous_speed', 0)
-        current_speed = location_data['speed']
-
-        # ============================================
-        # Case 1: Accident
-        # Pehle chal rahi thi — achanak ruk gayi
-        # ============================================
-        if previous_speed > 20 and current_speed == 0 and vibration_intensity > 5:
-            location_data['status'] = 'ACCIDENT DETECTED'
-            print("🚨 Accident detected!")
-            send_alert(
-                "ACCIDENT DETECTED",
-                f"Vehicle was at {previous_speed} km/h — sudden stop!",
-                lat=location_data['lat'],
-                lng=location_data['lng']
-            )
-            return jsonify({'status': 'accident alert sent'})
-
-        # ============================================
-        # Case 2: Tamper
-        # Vehicle ruki hai + high vibration
-        # ============================================
-        elif current_speed == 0 and vibration_intensity > 5:
-            location_data['status'] = 'TAMPER DETECTED'
-            print("⚠️ Tamper detected!")
-            send_alert(
-                "PHYSICAL TAMPER DETECTED",
-                "Vehicle stationary — possible theft attempt!",
-                lat=location_data['lat'],
-                lng=location_data['lng']
-            )
-            return jsonify({'status': 'tamper alert sent'})
-
-        # ============================================
-        # Case 3: Normal vibration — ignore
-        # ============================================
-        else:
-            print("Normal vibration — ignored")
-            return jsonify({'status': 'normal vibration ignored'})
-
-    except Exception as e:
-        print(f"❌ Error: {e}")
-        return jsonify({'status': 'error'}), 400
-
 @app.route('/update', methods=['POST'])
 def update_location():
     try:
-        # Step 1: Encrypted data lo
-        encrypted = request.json['data']
+        data = request.json
 
-        # Step 2: Decrypt karo
-        decrypted = decrypt_data(encrypted)
-        lat, lng, speed = decrypted.split(',')
-        lat, lng, speed = float(lat), float(lng), float(speed)
+        # Direct data lo
+        lat = float(data['lat'])
+        lng = float(data['lng'])
+        speed = float(data['speed'])
 
-        # Step 3: Pehle previous location save karo
+        # Previous location save karo
         prev = get_previous_location()
         safe_lat = prev['lat']
         safe_lng = prev['lng']
 
-        # Ab spoofing check karo
+        # Spoofing check karo
         is_spoof, reason = check_spoofing(lat, lng)
 
         if is_spoof:
             location_data['status'] = 'SPOOFING DETECTED'
-            print(f"🚨 {reason}")
+            print(f"Spoofing: {reason}")
 
             if safe_lat is not None:
                 alert_lat = safe_lat
@@ -155,19 +121,65 @@ def update_location():
                 'reason': reason
             }), 400
 
-        # Step 4: Safe hai — save karo
+        # Safe hai — save karo
         location_data['lat'] = lat
         location_data['lng'] = lng
         location_data['speed'] = speed
         location_data['status'] = 'Safe'
         location_data['timestamp'] = datetime.now().strftime("%H:%M:%S")
 
-        print(f"✅ Location saved: {lat}, {lng} | Speed: {speed} km/h")
+        print(f"Location saved: {lat}, {lng} | Speed: {speed}")
         return jsonify({'status': 'ok'})
 
     except Exception as e:
-        print(f"❌ Error: {e}")
-        return jsonify({'status': 'invalid data'}), 400
+        print(f"Error: {e}")
+        return jsonify({'status': 'error'}), 400
 
+# ============================================
+# ROUTE 6: Tamper & Accident Detection
+# Format: {"intensity": 7, "previous_speed": 60}
+# ============================================
+@app.route('/tamper', methods=['POST'])
+def tamper_detected():
+    try:
+        data = request.json
+        vibration_intensity = data.get('intensity', 0)
+        previous_speed = data.get('previous_speed', 0)
+        current_speed = location_data['speed']
+
+        # Accident Detection
+        if previous_speed > 20 and current_speed == 0 and vibration_intensity > 5:
+            location_data['status'] = 'ACCIDENT DETECTED'
+            print("Accident detected!")
+            send_alert(
+                "ACCIDENT DETECTED",
+                f"Vehicle was at {previous_speed} km/h — sudden stop!",
+                lat=location_data['lat'],
+                lng=location_data['lng']
+            )
+            return jsonify({'status': 'accident alert sent'})
+
+        # Tamper Detection
+        elif current_speed == 0 and vibration_intensity > 5:
+            location_data['status'] = 'TAMPER DETECTED'
+            print("Tamper detected!")
+            send_alert(
+                "PHYSICAL TAMPER DETECTED",
+                "Vehicle stationary — possible theft attempt!",
+                lat=location_data['lat'],
+                lng=location_data['lng']
+            )
+            return jsonify({'status': 'tamper alert sent'})
+
+        else:
+            return jsonify({'status': 'normal vibration ignored'})
+
+    except Exception as e:
+        print(f"Error: {e}")
+        return jsonify({'status': 'error'}), 400
+
+# ============================================
+# Server Start
+# ============================================
 if __name__ == '__main__':
     app.run(debug=True)
