@@ -81,59 +81,7 @@ def get_location():
 # Plain JSON data accept karta hai
 # Format: {"lat": 32.7266, "lng": 74.857, "speed": 60}
 # ============================================
-@app.route('/update', methods=['POST'])
-def update_location():
-    try:
-        data = request.json
-
-        # Direct data lo
-        lat = float(data['lat'])
-        lng = float(data['lng'])
-        speed = float(data['speed'])
-
-        # Previous location save karo
-        prev = get_previous_location()
-        safe_lat = prev['lat']
-        safe_lng = prev['lng']
-
-        # Spoofing check karo
-        is_spoof, reason = check_spoofing(lat, lng)
-
-        if is_spoof:
-            location_data['status'] = 'SPOOFING DETECTED'
-            print(f"Spoofing: {reason}")
-
-            if safe_lat is not None:
-                alert_lat = safe_lat
-                alert_lng = safe_lng
-            else:
-                alert_lat = lat
-                alert_lng = lng
-
-            send_alert(
-                "GPS SPOOFING DETECTED",
-                reason,
-                lat=alert_lat,
-                lng=alert_lng
-            )
-            return jsonify({
-                'status': 'spoofing detected',
-                'reason': reason
-            }), 400
-
-        # Safe hai — save karo
-        location_data['lat'] = lat
-        location_data['lng'] = lng
-        location_data['speed'] = speed
-        location_data['status'] = 'Safe'
-        location_data['timestamp'] = datetime.now().strftime("%H:%M:%S")
-
-        print(f"Location saved: {lat}, {lng} | Speed: {speed}")
-        return jsonify({'status': 'ok'})
-
-    except Exception as e:
-        print(f"Error: {e}")
-        return jsonify({'status': 'error'}), 400
+184896
 
 # ============================================
 # ROUTE 6: Tamper & Accident Detection
