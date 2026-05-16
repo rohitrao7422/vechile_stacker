@@ -1,16 +1,10 @@
-# ============================================
-# Vehicle Tracker - Main Server
-# Updated: Plain data accept karta hai
-# Encryption baad me add karenge
-# ============================================
-
 from flask import Flask, request, jsonify, render_template, redirect, url_for, session
 from datetime import datetime
 import bcrypt
 from dotenv import load_dotenv
 import os
 
-from spoofing_detection import check_spoofing, get_previous_location
+from spoofing_detection import check_spoofing
 from telegram_alert import send_alert
 
 load_dotenv()
@@ -18,116 +12,179 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY')
 
+# ============================================
+# Admin Password
+# ============================================
 PASSWORD = os.getenv('ADMIN_PASSWORD')
+
 HASHED_PASSWORD = bcrypt.hashpw(
     PASSWORD.encode('utf-8'),
     bcrypt.gensalt()
 )
 
+# ============================================
+# Vehicle Data
+# ============================================
 location_data = {
-    "lat": 32.7266,
-    "lng": 74.8570,
+    "lat": 0,
+    "lng": 0,
     "speed": 0,
     "status": "Safe",
     "timestamp": ""
 }
 
 # ============================================
-# ROUTE 1: Login
+# Login
 # ============================================
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+
     if request.method == 'POST':
+
         username = request.form['username']
         password = request.form['password']
-        if username == os.getenv('ADMIN_USERNAME') and bcrypt.checkpw(
-            password.encode('utf-8'),
-            HASHED_PASSWORD
+
+        if (
+            username == os.getenv('ADMIN_USERNAME')
+            and bcrypt.checkpw(
+                password.encode('utf-8'),
+                HASHED_PASSWORD
+            )
         ):
+
             session['logged_in'] = True
+
             return redirect(url_for('dashboard'))
+
         else:
-            return render_template('login.html', error="Galat username ya password")
-    return render_template('login.html', error=None)
+
+            return render_template(
+                'login.html',
+                error="Invalid username or password"
+            )
+
+    return render_template(
+        'login.html',
+        error=None
+    )
 
 # ============================================
-# ROUTE 2: Logout
+# Logout
 # ============================================
 @app.route('/logout')
 def logout():
+
     session.clear()
+
     return redirect(url_for('login'))
 
 # ============================================
-# ROUTE 3: Dashboard
+# Dashboard
 # ============================================
 @app.route('/')
 def dashboard():
+
     if not session.get('logged_in'):
+
         return redirect(url_for('login'))
+
     return render_template('dashboard.html')
 
 # ============================================
-# ROUTE 4: Location Data — Dashboard ke liye
+# Location API
 # ============================================
 @app.route('/location', methods=['GET'])
 def get_location():
-    if not session.get('logged_in'):
-        return jsonify({'error': 'Unauthorized'}), 401
+
     return jsonify(location_data)
 
 # ============================================
-# ROUTE 5: ESP32 Location Update
-# Plain JSON data accept karta hai
-# Format: {"lat": 32.7266, "lng": 74.857, "speed": 60}
+# ESP32 UPDATE ROUTE
+# ESP32 sends:
+# {
+#   "lat": 28.6139,
+#   "lng": 77.2090,
+#   "speed": 45
+# }
 # ============================================
-184896
+@app.route('/update', methods=['POST'])
+def update_location():
+
+    try:
+
+        data = request.json
+
+        lat = float(data['lat'])
+        lng = float(data['lng'])
+        speed = float(data['speed'])
+
+        # Save location
+        location_data['lat'] = lat
+        location_data['lng'] = lng
+        location_data['speed'] = speed
+        location_data['status'] = "Safe"
+        location_data['timestamp'] = datetime.now().strftime("%H:%M:%S")
+
+        print(f"✅ Location Updated: {lat}, {lng}")
+
+        return jsonify({
+            "status": "success"
+        })
+
+    except Exception as e:
+
+        print(f"❌ Error: {e}")
+
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 400
 
 # ============================================
-# ROUTE 6: Tamper & Accident Detection
-# Format: {"intensity": 7, "previous_speed": 60}
+# Tamper Detection
 # ============================================
 @app.route('/tamper', methods=['POST'])
 def tamper_detected():
+
     try:
+
         data = request.json
+
         vibration_intensity = data.get('intensity', 0)
-        previous_speed = data.get('previous_speed', 0)
-        current_speed = location_data['speed']
 
-        # Accident Detection
-        if previous_speed > 20 and current_speed == 0 and vibration_intensity > 5:
-            location_data['status'] = 'ACCIDENT DETECTED'
-            print("Accident detected!")
+        if vibration_intensity > 5:
+
+            location_data['status'] = "TAMPER DETECTED"
+
+            print("⚠️ Tamper detected!")
+
             send_alert(
-                "ACCIDENT DETECTED",
-                f"Vehicle was at {previous_speed} km/h — sudden stop!",
+                "TAMPER DETECTED",
+                "Possible theft attempt detected",
                 lat=location_data['lat'],
                 lng=location_data['lng']
             )
-            return jsonify({'status': 'accident alert sent'})
 
-        # Tamper Detection
-        elif current_speed == 0 and vibration_intensity > 5:
-            location_data['status'] = 'TAMPER DETECTED'
-            print("Tamper detected!")
-            send_alert(
-                "PHYSICAL TAMPER DETECTED",
-                "Vehicle stationary — possible theft attempt!",
-                lat=location_data['lat'],
-                lng=location_data['lng']
-            )
-            return jsonify({'status': 'tamper alert sent'})
+            return jsonify({
+                "status": "tamper alert sent"
+            })
 
-        else:
-            return jsonify({'status': 'normal vibration ignored'})
+        return jsonify({
+            "status": "normal"
+        })
 
     except Exception as e:
-        print(f"Error: {e}")
-        return jsonify({'status': 'error'}), 400
+
+        print(f"❌ Error: {e}")
+
+        return jsonify({
+            "status": "error"
+        }), 400
 
 # ============================================
-# Server Start
+# Run Server
 # ============================================
 if __name__ == '__main__':
+
+    app.run(debug=True)
     app.run(debug=True)
