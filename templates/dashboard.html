@@ -215,30 +215,39 @@
                 var signalText = document.getElementById('signalText');
 
                 if (signalLost) {
-                    // Signal nahi hai
-                    banner.style.display = 'block';
-                    signalDot.className = 'signal-dot signal-off';
-                    signalText.textContent = 'Lost';
+                   // ================================
+// Signal check — server ke status se
+// ================================
+var signalLost = (data.status === 'GPS Signal Lost') || 
+                 (data.lat === 0 && data.lng === 0);
 
-                    // Last location pe marker rakhो — move mat karo
-                    marker.setLatLng([lastLat, lastLng]);
-                    marker.bindPopup("⚠️ Last Known Location").openPopup();
+var banner = document.getElementById('signalBanner');
+var signalDot = document.getElementById('signalDot');
+var signalText = document.getElementById('signalText');
 
-                } else {
-                    // Signal hai
-                    banner.style.display = 'none';
-                    signalDot.className = 'signal-dot signal-on';
-                    signalText.textContent = 'Active';
+if (signalLost) {
+    // Signal nahi hai
+    banner.style.display = 'block';
+    signalDot.className = 'signal-dot signal-off';
+    signalText.textContent = 'Lost';
 
-                    // Location update karo
-                    lastLat = data.lat;
-                    lastLng = data.lng;
+    // Marker mat move karo — last location pe raho
+    marker.bindPopup("⚠️ Last Known Location").openPopup();
 
-                    marker.setLatLng([data.lat, data.lng]);
-                    map.setView([data.lat, data.lng]);
-                    marker.bindPopup("🚗 Vehicle Location").openPopup();
-                }
+} else {
+    // Signal hai
+    banner.style.display = 'none';
+    signalDot.className = 'signal-dot signal-on';
+    signalText.textContent = 'Active';
 
+    // Location update karo
+    lastLat = data.lat;
+    lastLng = data.lng;
+
+    marker.setLatLng([data.lat, data.lng]);
+    map.setView([data.lat, data.lng]);
+    marker.bindPopup("🚗 Vehicle Location").openPopup();
+}
                 // ================================
                 // Cards update karo
                 // ================================
