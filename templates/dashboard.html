@@ -1,41 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vehicle Tracker Dashboard</title>
-
-    <!-- ================================
-         Leaflet.js - Free Map Library
-         Google Maps ki tarah but free
-         ================================ -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
     <style>
-        /* ================================
-           Basic Reset - Browser defaults hatao
-           ================================ */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: Arial, sans-serif;
-        }
-
-        /* ================================
-           Main Layout
-           ================================ */
-        body {
-            background-color: #1a1a2e;
-            /* Dark background */
-            color: white;
-        }
-
-        /* ================================
-           Top Header Bar
-           ================================ */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
+        
+        body { background-color: #1a1a2e; color: white; }
+        
         .header {
             background-color: #16213e;
             padding: 15px 25px;
@@ -44,108 +19,104 @@
             align-items: center;
             border-bottom: 2px solid #0f3460;
         }
-
-        .header h1 {
-            font-size: 20px;
-            color: #00d4ff;
-        }
-
-        /* ================================
-           Status Badge - Safe/Alert dikhata hai
-           ================================ */
+        
+        .header h1 { font-size: 20px; color: #00d4ff; }
+        
+        /* Status Badge */
         .status-badge {
             padding: 8px 20px;
             border-radius: 20px;
             font-weight: bold;
             font-size: 14px;
         }
-
-        .status-safe {
-            background-color: #00b894;
-            /* Green - Safe */
-            color: white;
-        }
-
-        .status-alert {
-            background-color: #d63031;
-            /* Red - Alert */
-            color: white;
-        }
-
-        /* ================================
-           Info Cards - Speed, Location etc
-           ================================ */
+        .status-safe { background-color: #00b894; color: white; }
+        .status-alert { background-color: #d63031; color: white; }
+        .status-warning { background-color: #f39c12; color: white; }
+        
+        /* Info Cards */
         .info-bar {
             display: flex;
             gap: 15px;
             padding: 15px 25px;
             background-color: #16213e;
+            flex-wrap: wrap;
         }
-
+        
         .card {
             background-color: #0f3460;
             padding: 12px 20px;
             border-radius: 10px;
             min-width: 150px;
         }
-
-        .card-label {
-            font-size: 11px;
-            color: #a0a0a0;
-            /* Grey - label */
-            margin-bottom: 5px;
-        }
-
-        .card-value {
-            font-size: 18px;
+        
+        .card-label { font-size: 11px; color: #a0a0a0; margin-bottom: 5px; }
+        .card-value { font-size: 18px; font-weight: bold; color: #00d4ff; }
+        
+        /* Signal Lost Banner */
+        .signal-banner {
+            display: none;
+            background-color: #f39c12;
+            color: white;
+            text-align: center;
+            padding: 10px;
             font-weight: bold;
-            color: #00d4ff;
-            /* Blue - value */
+            font-size: 14px;
         }
-
-        /* ================================
-           Map Container
-           Full screen height minus header
-           ================================ */
-        #map {
-            height: calc(100vh - 130px);
-            /* Baaki sara screen */
-            width: 100%;
-        }
-
-        /* ================================
-           Last Update Time - Bottom right
-           ================================ */
-        .last-update {
+        
+        /* Map */
+        #map { height: calc(100vh - 165px); width: 100%; }
+        
+        /* Bottom Bar */
+        .bottom-bar {
             position: fixed;
-            bottom: 15px;
-            right: 15px;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 8px 15px;
-            border-radius: 8px;
-            font-size: 12px;
-            color: #a0a0a0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(22, 33, 62, 0.95);
+            padding: 8px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid #0f3460;
         }
+        
+        .last-update { font-size: 12px; color: #a0a0a0; }
+        
+        /* Google Maps Button */
+        .maps-btn {
+            background-color: #00d4ff;
+            color: #1a1a2e;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        
+        .maps-btn:hover { background-color: #00b8d9; }
+
+        /* Signal indicator */
+        .signal-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+        }
+        .signal-on { background-color: #00b894; }
+        .signal-off { background-color: #d63031; }
     </style>
 </head>
-
 <body>
 
-    <!-- ================================
-         Header Section
-         ================================ -->
+    <!-- Header -->
     <div class="header">
         <h1>🚗 Secure Vehicle Tracker</h1>
-        <!-- Status badge - JS se update hoga -->
-        <span class="status-badge status-safe" id="statusBadge">
-            ✅ Safe
-        </span>
+        <span class="status-badge status-safe" id="statusBadge">✅ Safe</span>
     </div>
 
-    <!-- ================================
-         Info Cards Section
-         Speed, Coordinates dikhate hain
-         ================================ -->
+    <!-- Info Cards -->
     <div class="info-bar">
         <div class="card">
             <div class="card-label">SPEED</div>
@@ -163,88 +134,159 @@
             <div class="card-label">STATUS</div>
             <div class="card-value" id="statusValue">Safe</div>
         </div>
+        <div class="card">
+            <div class="card-label">GPS SIGNAL</div>
+            <div class="card-value" id="signalValue">
+                <span class="signal-dot signal-on" id="signalDot"></span>
+                <span id="signalText">Active</span>
+            </div>
+        </div>
     </div>
 
-    <!-- ================================
-         Map - Yahan live location dikhegi
-         ================================ -->
+    <!-- Signal Lost Banner -->
+    <div class="signal-banner" id="signalBanner">
+        ⚠️ GPS Signal Lost — Showing Last Known Location
+    </div>
+
+    <!-- Map -->
     <div id="map"></div>
 
-    <!-- Last update time -->
-    <div class="last-update">
-        Last Update: <span id="lastUpdate">--</span>
+    <!-- Bottom Bar -->
+    <div class="bottom-bar">
+        <div class="last-update">
+            Last Update: <span id="lastUpdate">--</span>
+        </div>
+        <a class="maps-btn" id="mapsLink" href="#" target="_blank">
+            📍 Open in Google Maps
+        </a>
     </div>
 
     <script>
-        // ================================
-        // Map Initialize karo
-        // Jammu ki location pe center karo
-        // ================================
+        // Map initialize
         var map = L.map('map').setView([32.7266, 74.8570], 13);
 
-        // ================================
-        // Map Tiles Load karo
-        // OpenStreetMap - bilkul free
-        // ================================
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: 'OpenStreetMap'
         }).addTo(map);
 
-        // ================================
-        // Vehicle Marker banao map pe
-        // Yeh move karega jab location update hogi
-        // ================================
+        // Vehicle marker
         var marker = L.marker([32.7266, 74.8570]).addTo(map);
         marker.bindPopup("Vehicle Location").openPopup();
 
-        // ================================
-        // Server se location fetch karo
-        // Har 5 seconds me automatically call hogi
-        // ================================
+        // Last known location
+        var lastLat = 32.7266;
+        var lastLng = 74.8570;
+        var lastUpdateTime = null;
+        var signalLostThreshold = 30; // 30 seconds me update nahi aaya = signal lost
+
         function fetchLocation() {
             fetch('/location')
-                .then(response => response.json())
-                .then(data => {
+            .then(response => response.json())
+            .then(data => {
+                var currentTime = new Date();
 
-                    // Marker ko naye coordinates pe move karo
-                    marker.setLatLng([data.lat, data.lng]);
+                // ================================
+                // Signal check karo
+                // Agar 30 sec se zyada update nahi
+                // ================================
+                var signalLost = false;
 
-                    // Map ko vehicle ke saath center karo
-                    map.setView([data.lat, data.lng]);
+                if (data.timestamp) {
+                    // Last update ka time check karo
+                    lastUpdateTime = currentTime;
+                }
 
-                    // Cards update karo
-                    document.getElementById('speedValue').textContent = data.speed + ' km/h';
-                    document.getElementById('latValue').textContent = data.lat.toFixed(4);
-                    document.getElementById('lngValue').textContent = data.lng.toFixed(4);
-                    document.getElementById('statusValue').textContent = data.status;
-                    document.getElementById('lastUpdate').textContent = data.timestamp || '--';
-
-                    // ================================
-                    // Status Badge update karo
-                    // Safe = Green, Alert = Red
-                    // ================================
-                    var badge = document.getElementById('statusBadge');
-                    if (data.status === 'Safe') {
-                        badge.className = 'status-badge status-safe';
-                        badge.textContent = '✅ Safe';
-                    } else {
-                        badge.className = 'status-badge status-alert';
-                        badge.textContent = '🚨 ' + data.status;
+                // Agar timestamp same hai baar baar — signal lost
+                if (lastUpdateTime) {
+                    var diff = (currentTime - lastUpdateTime) / 1000;
+                    if (diff > signalLostThreshold) {
+                        signalLost = true;
                     }
-                })
-                .catch(err => {
-                    // Agar server se connection fail ho
-                    console.error('Server connection failed:', err);
-                });
+                }
+
+                // ================================
+                // Signal Lost Banner
+                // ================================
+                var banner = document.getElementById('signalBanner');
+                var signalDot = document.getElementById('signalDot');
+                var signalText = document.getElementById('signalText');
+
+                if (signalLost) {
+                    // Signal nahi hai
+                    banner.style.display = 'block';
+                    signalDot.className = 'signal-dot signal-off';
+                    signalText.textContent = 'Lost';
+
+                    // Last location pe marker rakhो — move mat karo
+                    marker.setLatLng([lastLat, lastLng]);
+                    marker.bindPopup("⚠️ Last Known Location").openPopup();
+
+                } else {
+                    // Signal hai
+                    banner.style.display = 'none';
+                    signalDot.className = 'signal-dot signal-on';
+                    signalText.textContent = 'Active';
+
+                    // Location update karo
+                    lastLat = data.lat;
+                    lastLng = data.lng;
+
+                    marker.setLatLng([data.lat, data.lng]);
+                    map.setView([data.lat, data.lng]);
+                    marker.bindPopup("🚗 Vehicle Location").openPopup();
+                }
+
+                // ================================
+                // Cards update karo
+                // ================================
+                document.getElementById('speedValue').textContent = data.speed + ' km/h';
+                document.getElementById('latValue').textContent = data.lat.toFixed(4);
+                document.getElementById('lngValue').textContent = data.lng.toFixed(4);
+                document.getElementById('statusValue').textContent = data.status;
+                document.getElementById('lastUpdate').textContent = data.timestamp || '--';
+
+                // ================================
+                // Google Maps Link update karo
+                // ================================
+                var mapsLink = document.getElementById('mapsLink');
+                mapsLink.href = "https://www.google.com/maps?q=" + lastLat + "," + lastLng;
+
+                // ================================
+                // Status Badge
+                // ================================
+                var badge = document.getElementById('statusBadge');
+                if (data.status === 'Safe') {
+                    badge.className = 'status-badge status-safe';
+                    badge.textContent = '✅ Safe';
+                } else if (data.status === 'SPOOFING DETECTED') {
+                    badge.className = 'status-badge status-alert';
+                    badge.textContent = '🚨 SPOOFING DETECTED';
+                } else if (data.status === 'TAMPER DETECTED') {
+                    badge.className = 'status-badge status-alert';
+                    badge.textContent = '⚠️ TAMPER DETECTED';
+                } else if (data.status === 'ACCIDENT DETECTED') {
+                    badge.className = 'status-badge status-alert';
+                    badge.textContent = '🚑 ACCIDENT DETECTED';
+                } else {
+                    badge.className = 'status-badge status-warning';
+                    badge.textContent = '⚠️ ' + data.status;
+                }
+            })
+            .catch(err => {
+                // Server se connection fail
+                console.error('Server connection failed:', err);
+                document.getElementById('signalBanner').style.display = 'block';
+                document.getElementById('signalDot').className = 'signal-dot signal-off';
+                document.getElementById('signalText').textContent = 'Lost';
+            });
         }
 
-        // Pehli baar turant call karo
+        // Pehli baar call karo
         fetchLocation();
 
-        // Phir har 5 seconds me call karo
+        // Har 5 sec me
         setInterval(fetchLocation, 5000);
     </script>
 
 </body>
-
 </html>
