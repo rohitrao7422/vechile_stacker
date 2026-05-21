@@ -8,9 +8,8 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
-        
         body { background-color: #1a1a2e; color: white; }
-        
+
         .header {
             background-color: #16213e;
             padding: 15px 25px;
@@ -19,21 +18,13 @@
             align-items: center;
             border-bottom: 2px solid #0f3460;
         }
-        
         .header h1 { font-size: 20px; color: #00d4ff; }
-        
-        /* Status Badge */
-        .status-badge {
-            padding: 8px 20px;
-            border-radius: 20px;
-            font-weight: bold;
-            font-size: 14px;
-        }
+
+        .status-badge { padding: 8px 20px; border-radius: 20px; font-weight: bold; font-size: 14px; }
         .status-safe { background-color: #00b894; color: white; }
         .status-alert { background-color: #d63031; color: white; }
         .status-warning { background-color: #f39c12; color: white; }
-        
-        /* Info Cards */
+
         .info-bar {
             display: flex;
             gap: 15px;
@@ -41,18 +32,10 @@
             background-color: #16213e;
             flex-wrap: wrap;
         }
-        
-        .card {
-            background-color: #0f3460;
-            padding: 12px 20px;
-            border-radius: 10px;
-            min-width: 150px;
-        }
-        
+        .card { background-color: #0f3460; padding: 12px 20px; border-radius: 10px; min-width: 150px; }
         .card-label { font-size: 11px; color: #a0a0a0; margin-bottom: 5px; }
         .card-value { font-size: 18px; font-weight: bold; color: #00d4ff; }
-        
-        /* Signal Lost Banner */
+
         .signal-banner {
             display: none;
             background-color: #f39c12;
@@ -62,16 +45,12 @@
             font-weight: bold;
             font-size: 14px;
         }
-        
-        /* Map */
-        #map { height: calc(100vh - 165px); width: 100%; }
-        
-        /* Bottom Bar */
+
+        #map { height: calc(100vh - 200px); width: 100%; }
+
         .bottom-bar {
             position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
+            bottom: 0; left: 0; right: 0;
             background: rgba(22, 33, 62, 0.95);
             padding: 8px 20px;
             display: flex;
@@ -79,10 +58,7 @@
             align-items: center;
             border-top: 1px solid #0f3460;
         }
-        
         .last-update { font-size: 12px; color: #a0a0a0; }
-        
-        /* Google Maps Button */
         .maps-btn {
             background-color: #00d4ff;
             color: #1a1a2e;
@@ -91,214 +67,164 @@
             font-size: 12px;
             font-weight: bold;
             text-decoration: none;
-            cursor: pointer;
         }
-        
-        .maps-btn:hover { background-color: #00b8d9; }
 
-        /* Signal indicator */
-        .signal-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 6px;
-        }
+        .signal-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; }
         .signal-on { background-color: #00b894; }
         .signal-off { background-color: #d63031; }
     </style>
 </head>
 <body>
 
-    <!-- Header -->
-    <div class="header">
-        <h1>🚗 Secure Vehicle Tracker</h1>
-        <span class="status-badge status-safe" id="statusBadge">✅ Safe</span>
-    </div>
+<div class="header">
+    <h1>🚗 Secure Vehicle Tracker</h1>
+    <span class="status-badge status-safe" id="statusBadge">✅ Safe</span>
+</div>
 
-    <!-- Info Cards -->
-    <div class="info-bar">
-        <div class="card">
-            <div class="card-label">SPEED</div>
-            <div class="card-value" id="speedValue">0 km/h</div>
-        </div>
-        <div class="card">
-            <div class="card-label">LATITUDE</div>
-            <div class="card-value" id="latValue">--</div>
-        </div>
-        <div class="card">
-            <div class="card-label">LONGITUDE</div>
-            <div class="card-value" id="lngValue">--</div>
-        </div>
-        <div class="card">
-            <div class="card-label">STATUS</div>
-            <div class="card-value" id="statusValue">Safe</div>
-        </div>
-        <div class="card">
-            <div class="card-label">GPS SIGNAL</div>
-            <div class="card-value" id="signalValue">
-                <span class="signal-dot signal-on" id="signalDot"></span>
-                <span id="signalText">Active</span>
-            </div>
+<div class="info-bar">
+    <div class="card">
+        <div class="card-label">SPEED</div>
+        <div class="card-value" id="speedValue">0 km/h</div>
+    </div>
+    <div class="card">
+        <div class="card-label">LATITUDE</div>
+        <div class="card-value" id="latValue">--</div>
+    </div>
+    <div class="card">
+        <div class="card-label">LONGITUDE</div>
+        <div class="card-value" id="lngValue">--</div>
+    </div>
+    <div class="card">
+        <div class="card-label">STATUS</div>
+        <div class="card-value" id="statusValue">--</div>
+    </div>
+    <div class="card">
+        <div class="card-label">GPS SIGNAL</div>
+        <div class="card-value">
+            <span class="signal-dot signal-off" id="signalDot"></span>
+            <span id="signalText">Waiting...</span>
         </div>
     </div>
+</div>
 
-    <!-- Signal Lost Banner -->
-    <div class="signal-banner" id="signalBanner">
-        ⚠️ GPS Signal Lost — Showing Last Known Location
-    </div>
+<div class="signal-banner" id="signalBanner">
+    ⚠️ GPS Signal Lost — Showing Last Known Location
+</div>
 
-    <!-- Map -->
-    <div id="map"></div>
+<div id="map"></div>
 
-    <!-- Bottom Bar -->
-    <div class="bottom-bar">
-        <div class="last-update">
-            Last Update: <span id="lastUpdate">--</span>
-        </div>
-        <a class="maps-btn" id="mapsLink" 
-   href="https://www.google.com/maps?q=32.7266,74.8570" 
-   target="_blank" 
-   rel="noopener noreferrer">
-    📍 Open in Google Maps
-</a>
-    </div>
+<div class="bottom-bar">
+    <div class="last-update">Last Update: <span id="lastUpdate">--</span></div>
+    <a class="maps-btn" id="mapsLink" href="#" target="_blank" rel="noopener noreferrer">
+        📍 Open in Google Maps
+    </a>
+</div>
 
-    <script>
-        // Map initialize
-        var map = L.map('map').setView([32.7266, 74.8570], 13);
+<script>
+    // Map initialize — world view se shuru
+    var map = L.map('map').setView([20, 0], 2);
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: 'OpenStreetMap'
-        }).addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: 'OpenStreetMap'
+    }).addTo(map);
 
-        // Vehicle marker
-        var marker = L.marker([32.7266, 74.8570]).addTo(map);
-        marker.bindPopup("Vehicle Location").openPopup();
+    var marker = null;
+    var lastLat = null;
+    var lastLng = null;
+    var firstFix = false;
 
-        // Last known location
-        var lastLat = 32.7266;
-        var lastLng = 74.8570;
-        var lastUpdateTime = null;
-        var signalLostThreshold = 30; // 30 seconds me update nahi aaya = signal lost
+    function fetchLocation() {
+        fetch('/location')
+        .then(response => response.json())
+        .then(data => {
+            var signalLost = data.status === 'GPS Signal Lost' ||
+                             (data.lat === 0.0 && data.lng === 0.0) ||
+                             data.timestamp === '';
 
-        function fetchLocation() {
-            fetch('/location')
-            .then(response => response.json())
-            .then(data => {
-                var currentTime = new Date();
+            var banner = document.getElementById('signalBanner');
+            var signalDot = document.getElementById('signalDot');
+            var signalText = document.getElementById('signalText');
 
-                // ================================
-                // Signal check karo
-                // Agar 30 sec se zyada update nahi
-                // ================================
-                var signalLost = false;
+            if (signalLost) {
+                // Signal nahi hai
+                banner.style.display = 'block';
+                signalDot.className = 'signal-dot signal-off';
+                signalText.textContent = 'Lost';
 
-                if (data.timestamp) {
-                    // Last update ka time check karo
-                    lastUpdateTime = currentTime;
+                // Last location pe marker rakho
+                if (lastLat && marker) {
+                    marker.bindPopup("⚠️ Last Known Location").openPopup();
                 }
 
-                // Agar timestamp same hai baar baar — signal lost
-                if (lastUpdateTime) {
-                    var diff = (currentTime - lastUpdateTime) / 1000;
-                    if (diff > signalLostThreshold) {
-                        signalLost = true;
-                    }
-                }
+            } else {
+                // Signal hai
+                banner.style.display = 'none';
+                signalDot.className = 'signal-dot signal-on';
+                signalText.textContent = 'Active';
 
-                // ================================
-                // Signal Lost Banner
-                // ================================
-                var banner = document.getElementById('signalBanner');
-                var signalDot = document.getElementById('signalDot');
-                var signalText = document.getElementById('signalText');
+                lastLat = data.lat;
+                lastLng = data.lng;
 
-                if (signalLost) {
-                   // ================================
-// Signal check — server ke status se
-// ================================
-var signalLost = (data.status === 'GPS Signal Lost') || 
-                 (data.lat === 0 && data.lng === 0);
-
-var banner = document.getElementById('signalBanner');
-var signalDot = document.getElementById('signalDot');
-var signalText = document.getElementById('signalText');
-
-if (signalLost) {
-    // Signal nahi hai
-    banner.style.display = 'block';
-    signalDot.className = 'signal-dot signal-off';
-    signalText.textContent = 'Lost';
-
-    // Marker mat move karo — last location pe raho
-    marker.bindPopup("⚠️ Last Known Location").openPopup();
-
-} else {
-    // Signal hai
-    banner.style.display = 'none';
-    signalDot.className = 'signal-dot signal-on';
-    signalText.textContent = 'Active';
-
-    // Location update karo
-    lastLat = data.lat;
-    lastLng = data.lng;
-
-    marker.setLatLng([data.lat, data.lng]);
-    map.setView([data.lat, data.lng]);
-    marker.bindPopup("🚗 Vehicle Location").openPopup();
-}
-                // ================================
-                // Cards update karo
-                // ================================
-                document.getElementById('speedValue').textContent = data.speed + ' km/h';
-                document.getElementById('latValue').textContent = data.lat.toFixed(4);
-                document.getElementById('lngValue').textContent = data.lng.toFixed(4);
-                document.getElementById('statusValue').textContent = data.status;
-                document.getElementById('lastUpdate').textContent = data.timestamp || '--';
-
-                // ================================
-                // Google Maps Link update karo
-                // ================================
-                var mapsLink = document.getElementById('mapsLink');
-                mapsLink.href = "https://www.google.com/maps?q=" + lastLat + "," + lastLng;
-
-                // ================================
-                // Status Badge
-                // ================================
-                var badge = document.getElementById('statusBadge');
-                if (data.status === 'Safe') {
-                    badge.className = 'status-badge status-safe';
-                    badge.textContent = '✅ Safe';
-                } else if (data.status === 'SPOOFING DETECTED') {
-                    badge.className = 'status-badge status-alert';
-                    badge.textContent = '🚨 SPOOFING DETECTED';
-                } else if (data.status === 'TAMPER DETECTED') {
-                    badge.className = 'status-badge status-alert';
-                    badge.textContent = '⚠️ TAMPER DETECTED';
-                } else if (data.status === 'ACCIDENT DETECTED') {
-                    badge.className = 'status-badge status-alert';
-                    badge.textContent = '🚑 ACCIDENT DETECTED';
+                // Marker banao ya move karo
+                if (marker === null) {
+                    marker = L.marker([data.lat, data.lng]).addTo(map);
+                    marker.bindPopup("🚗 Vehicle Location").openPopup();
                 } else {
-                    badge.className = 'status-badge status-warning';
-                    badge.textContent = '⚠️ ' + data.status;
+                    marker.setLatLng([data.lat, data.lng]);
                 }
-            })
-            .catch(err => {
-                // Server se connection fail
-                console.error('Server connection failed:', err);
-                document.getElementById('signalBanner').style.display = 'block';
-                document.getElementById('signalDot').className = 'signal-dot signal-off';
-                document.getElementById('signalText').textContent = 'Lost';
-            });
-        }
 
-        // Pehli baar call karo
-        fetchLocation();
+                // Pehli baar fix mile toh zoom karo
+                if (!firstFix) {
+                    map.setView([data.lat, data.lng], 15);
+                    firstFix = true;
+                } else {
+                    map.setView([data.lat, data.lng]);
+                }
 
-        // Har 5 sec me
-        setInterval(fetchLocation, 5000);
-    </script>
+                // Google Maps link update karo
+                document.getElementById('mapsLink').href =
+                    "https://www.google.com/maps?q=" + data.lat + "," + data.lng;
+            }
+
+            // Cards update karo
+            document.getElementById('speedValue').textContent = data.speed + ' km/h';
+            document.getElementById('latValue').textContent =
+                (data.lat && data.lat !== 0) ? data.lat.toFixed(4) : '--';
+            document.getElementById('lngValue').textContent =
+                (data.lng && data.lng !== 0) ? data.lng.toFixed(4) : '--';
+            document.getElementById('statusValue').textContent = data.status;
+            document.getElementById('lastUpdate').textContent = data.timestamp || '--';
+
+            // Status badge
+            var badge = document.getElementById('statusBadge');
+            if (data.status === 'Safe') {
+                badge.className = 'status-badge status-safe';
+                badge.textContent = '✅ Safe';
+            } else if (data.status === 'GPS Signal Lost') {
+                badge.className = 'status-badge status-warning';
+                badge.textContent = '📡 GPS Signal Lost';
+            } else if (data.status === 'SPOOFING DETECTED') {
+                badge.className = 'status-badge status-alert';
+                badge.textContent = '🚨 SPOOFING DETECTED';
+            } else if (data.status === 'TAMPER DETECTED') {
+                badge.className = 'status-badge status-alert';
+                badge.textContent = '⚠️ TAMPER DETECTED';
+            } else if (data.status === 'ACCIDENT DETECTED') {
+                badge.className = 'status-badge status-alert';
+                badge.textContent = '🚑 ACCIDENT DETECTED';
+            }
+        })
+        .catch(err => {
+            console.error('Server error:', err);
+            document.getElementById('signalBanner').style.display = 'block';
+            document.getElementById('signalDot').className = 'signal-dot signal-off';
+            document.getElementById('signalText').textContent = 'Lost';
+        });
+    }
+
+    fetchLocation();
+    setInterval(fetchLocation, 5000);
+</script>
 
 </body>
 </html>
