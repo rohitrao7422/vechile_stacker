@@ -3,6 +3,7 @@ from datetime import datetime
 import bcrypt
 from dotenv import load_dotenv
 import os
+import pytz
 
 from spoofing_detection import check_spoofing
 from telegram_alert import send_alert
@@ -10,10 +11,16 @@ from telegram_alert import send_alert
 load_dotenv()
 
 app = Flask(__name__)
+
 app.secret_key = os.getenv('SECRET_KEY')
 
 # ============================================
-# Admin Password
+# INDIA TIMEZONE
+# ============================================
+india = pytz.timezone('Asia/Kolkata')
+
+# ============================================
+# ADMIN PASSWORD
 # ============================================
 PASSWORD = os.getenv('ADMIN_PASSWORD')
 
@@ -23,7 +30,7 @@ HASHED_PASSWORD = bcrypt.hashpw(
 )
 
 # ============================================
-# Vehicle Data
+# VEHICLE DATA
 # ============================================
 location_data = {
     "lat": 0,
@@ -34,7 +41,7 @@ location_data = {
 }
 
 # ============================================
-# Login
+# LOGIN
 # ============================================
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -69,7 +76,7 @@ def login():
     )
 
 # ============================================
-# Logout
+# LOGOUT
 # ============================================
 @app.route('/logout')
 def logout():
@@ -79,7 +86,7 @@ def logout():
     return redirect(url_for('login'))
 
 # ============================================
-# Dashboard
+# DASHBOARD
 # ============================================
 @app.route('/')
 def dashboard():
@@ -91,7 +98,7 @@ def dashboard():
     return render_template('dashboard.html')
 
 # ============================================
-# Location API
+# LOCATION API
 # ============================================
 @app.route('/location', methods=['GET'])
 def get_location():
@@ -99,13 +106,7 @@ def get_location():
     return jsonify(location_data)
 
 # ============================================
-# ESP32 UPDATE ROUTE
-# ESP32 sends:
-# {
-#   "lat": 28.6139,
-#   "lng": 77.2090,
-#   "speed": 45
-# }
+# ESP32 LOCATION UPDATE
 # ============================================
 @app.route('/update', methods=['POST'])
 def update_location():
@@ -114,16 +115,54 @@ def update_location():
 
         data = request.json
 
+        print("📡 Incoming Data:")
+        print(data)
+
         lat = float(data['lat'])
         lng = float(data['lng'])
         speed = float(data['speed'])
 
-        # Save location
+        # ====================================
+        # OPTIONAL GPS SPOOF CHECK
+        # ====================================
+        try:
+
+            is_spoof, reason = check_spoofing(
+                lat,
+                lng
+            )
+
+            if is_spoof:
+
+                location_data['status'] = "GPS SPOOFING DETECTED"
+
+                send_alert(
+                    "GPS SPOOFING DETECTED",
+                    reason,
+                    lat=lat,
+                    lng=lng
+                )
+
+                return jsonify({
+                    "status": "spoofing detected"
+                }), 400
+
+        except Exception as spoof_error:
+
+            print(f"⚠️ Spoof check skipped: {spoof_error}")
+
+        # ====================================
+        # SAVE LOCATION
+        # ====================================
         location_data['lat'] = lat
         location_data['lng'] = lng
         location_data['speed'] = speed
         location_data['status'] = "Safe"
-        location_data['timestamp'] = datetime.now().strftime("%H:%M:%S")
+
+        # INDIA TIME
+        location_data['timestamp'] = datetime.now(
+            india
+        ).strftime("%H:%M:%S")
 
         print(f"✅ Location Updated: {lat}, {lng}")
 
@@ -141,7 +180,7 @@ def update_location():
         }), 400
 
 # ============================================
-# Tamper Detection
+# TAMPER DETECTION
 # ============================================
 @app.route('/tamper', methods=['POST'])
 def tamper_detected():
@@ -150,11 +189,22 @@ def tamper_detected():
 
         data = request.json
 
+        print("🚨 Tamper Data:")
+        print(data)
+
         vibration_intensity = data.get('intensity', 0)
 
+        # ====================================
+        # TAMPER DETECTED
+        # ====================================
         if vibration_intensity > 5:
 
             location_data['status'] = "TAMPER DETECTED"
+
+            # INDIA TIME
+            location_data['timestamp'] = datetime.now(
+                india
+            ).strftime("%H:%M:%S")
 
             print("⚠️ Tamper detected!")
 
@@ -178,13 +228,17 @@ def tamper_detected():
         print(f"❌ Error: {e}")
 
         return jsonify({
-            "status": "error"
+            "status": "error",
+            "message": str(e)
         }), 400
 
 # ============================================
-# Run Server
+# RUN SERVER
 # ============================================
 if __name__ == '__main__':
 
-    app.run(debug=True)
-    app.run(debug=True)
+    app.run(
+        host='0.0.0.0',
+        port=5000,
+        debug=True
+    )
